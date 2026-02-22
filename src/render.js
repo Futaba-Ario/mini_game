@@ -52,6 +52,34 @@ export function renderGame(ctx, state) {
 
 /**
  * @param {CanvasRenderingContext2D} ctx
+ * @param {import('./game.js').GameState} state
+ * @param {{
+ *   showHitboxes?: boolean;
+ *   showTelemetry?: boolean;
+ *   telemetryLines?: string[];
+ * }} [debugView]
+ */
+export function renderDebugOverlay(ctx, state, debugView = {}) {
+  const { showHitboxes = false, showTelemetry = false, telemetryLines = [] } = debugView;
+  if (!showHitboxes && !showTelemetry) {
+    return;
+  }
+
+  ctx.save();
+
+  if (showHitboxes) {
+    drawDebugHitboxes(ctx, state);
+  }
+
+  if (showTelemetry && telemetryLines.length > 0) {
+    drawDebugTelemetry(ctx, telemetryLines);
+  }
+
+  ctx.restore();
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
  */
 function drawBackground(ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, VIRTUAL_HEIGHT);
@@ -215,3 +243,79 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {import('./game.js').GameState} state
+ */
+function drawDebugHitboxes(ctx, state) {
+  const playerRect = getDebugPlayerRect(state.playerLane);
+  ctx.strokeStyle = state.isInvincible ? "rgba(124, 242, 199, 0.95)" : "rgba(255, 209, 102, 0.95)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    playerRect.left,
+    playerRect.top,
+    playerRect.right - playerRect.left,
+    playerRect.bottom - playerRect.top,
+  );
+
+  ctx.strokeStyle = "rgba(255, 107, 107, 0.95)";
+  ctx.lineWidth = 1.5;
+  for (const obstacle of state.obstacles) {
+    const rect = getDebugObstacleRect(obstacle);
+    ctx.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+  }
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string[]} lines
+ */
+function drawDebugTelemetry(ctx, lines) {
+  const lineHeight = 13;
+  const paddingX = 8;
+  const paddingY = 7;
+  const boxWidth = Math.min(250, VIRTUAL_WIDTH - 20);
+  const boxHeight = paddingY * 2 + lineHeight * lines.length;
+  const x = 10;
+  const y = VIRTUAL_HEIGHT - boxHeight - 10;
+
+  ctx.fillStyle = "rgba(6, 10, 14, 0.82)";
+  roundRect(ctx, x, y, boxWidth, boxHeight, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(157, 213, 255, 0.26)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#dff5ff";
+  ctx.font = "11px monospace";
+  ctx.textBaseline = "top";
+  for (let i = 0; i < lines.length; i += 1) {
+    ctx.fillText(lines[i], x + paddingX, y + paddingY + i * lineHeight);
+  }
+}
+
+/**
+ * @param {0|1|2} lane
+ */
+function getDebugPlayerRect(lane) {
+  const centerX = LANE_METRICS.laneCenterXs[lane];
+  return {
+    left: centerX - LANE_METRICS.playerWidth * 0.5,
+    right: centerX + LANE_METRICS.playerWidth * 0.5,
+    top: LANE_METRICS.playerY,
+    bottom: LANE_METRICS.playerY + LANE_METRICS.playerHeight,
+  };
+}
+
+/**
+ * @param {import('./game.js').Obstacle} obstacle
+ */
+function getDebugObstacleRect(obstacle) {
+  const centerX = LANE_METRICS.laneCenterXs[obstacle.lane];
+  return {
+    left: centerX - obstacle.width * 0.5,
+    right: centerX + obstacle.width * 0.5,
+    top: obstacle.y,
+    bottom: obstacle.y + obstacle.height,
+  };
+}

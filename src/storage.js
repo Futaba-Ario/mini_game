@@ -8,7 +8,7 @@ export function loadHighScore() {
     }
     const parsed = Number.parseInt(raw, 10);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-  } catch {
+  } catch (_error) {
     return 0;
   }
 }
@@ -16,8 +16,7 @@ export function loadHighScore() {
 export function saveHighScore(score) {
   try {
     window.localStorage.setItem(STORAGE_KEY_HIGH_SCORE, String(Math.max(0, score | 0)));
-  } catch {
+  } catch (_error) {
     // localStorage unavailable: ignore and keep game running.
   }
 }
-
