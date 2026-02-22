@@ -47,10 +47,58 @@ export const STAGES = [
   {
     id: 4,
     minScore: 60,
-    maxScore: Infinity,
+    maxScore: 79,
     speedPxPerSec: 760,
     spawnIntervalMs: 500,
     doubleSpawnChance: 0.3,
+  },
+  {
+    id: 5,
+    minScore: 80,
+    maxScore: 99,
+    speedPxPerSec: 840,
+    spawnIntervalMs: 450,
+    doubleSpawnChance: 0.34,
+  },
+  {
+    id: 6,
+    minScore: 100,
+    maxScore: 119,
+    speedPxPerSec: 930,
+    spawnIntervalMs: 410,
+    doubleSpawnChance: 0.38,
+  },
+  {
+    id: 7,
+    minScore: 120,
+    maxScore: 139,
+    speedPxPerSec: 1020,
+    spawnIntervalMs: 380,
+    doubleSpawnChance: 0.42,
+  },
+  {
+    id: 8,
+    minScore: 140,
+    maxScore: 159,
+    speedPxPerSec: 1120,
+    spawnIntervalMs: 350,
+    doubleSpawnChance: 0.46,
+  },
+  {
+    id: 9,
+    minScore: 160,
+    maxScore: 179,
+    speedPxPerSec: 1230,
+    spawnIntervalMs: 330,
+    doubleSpawnChance: 0.5,
+  },
+  {
+    id: 10,
+    minScore: 180,
+    maxScore: Infinity,
+    speedPxPerSec: 1340,
+    spawnIntervalMs: 310,
+    doubleSpawnChance: 0.55,
   },
 ];
 
@@ -77,4 +125,3 @@ export function getLaneMetrics() {
     obstacleHeight: OBSTACLE_HEIGHT,
   };
 }
-
