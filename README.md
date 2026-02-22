@@ -92,6 +92,7 @@ git push -u origin main
 ├─ index.html
 ├─ styles.css
 ├─ game-plan.md
+├─ test-cases.md
 └─ src/
    ├─ config.js    # 定数・難易度テーブル
    ├─ storage.js   # 最高スコア保存/読込
@@ -99,6 +100,9 @@ git push -u origin main
    ├─ render.js    # Canvas描画 / DOM表示更新
    └─ main.js      # 初期化・イベント接続・画面遷移・ゲームループ
 ```
+
+## テストケース
+- 詳細なテストケース一覧（手動/ロジック/統合観点）は `test-cases.md` を参照
 
 ## 実装メモ
 - 仮想座標は `360x640`（Canvas内部サイズ）
