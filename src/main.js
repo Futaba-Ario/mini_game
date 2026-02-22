@@ -251,9 +251,13 @@ function switchScreen(dom, nextScreen) {
  * @param {HTMLElement} overlay
  */
 function updateOrientationOverlay(overlay) {
+  const likelyTouchDevice =
+    window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
+    navigator.maxTouchPoints > 0;
   const isLandscape = window.innerWidth > window.innerHeight;
-  overlay.classList.toggle("is-visible", isLandscape);
-  overlay.setAttribute("aria-hidden", String(!isLandscape));
+  const shouldShow = likelyTouchDevice && isLandscape;
+  overlay.classList.toggle("is-visible", shouldShow);
+  overlay.setAttribute("aria-hidden", String(!shouldShow));
 }
 
 bootstrap();

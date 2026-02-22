@@ -183,7 +183,7 @@ export function updateGame(state, deltaMs, options = {}) {
     }
   }
 
-  const stage = stageOverride ?? getStageByScore(state.score);
+  const stage = stageOverride != null ? stageOverride : getStageByScore(state.score);
   if (!disableSpawning) {
     state.spawnTimerMs += deltaMs;
     let spawnSteps = 0;

@@ -2,7 +2,7 @@ import { INITIAL_LIVES, LANE_COUNT, STAGES, getStageByScore } from "./config.js"
 import { spawnDebugObstacles } from "./game.js";
 
 const DEFAULT_DEBUG_SEED = 12345;
-const INFINITE_INVINCIBLE_TIMER_MS = 1_000_000_000;
+const INFINITE_INVINCIBLE_TIMER_MS = 1000000000;
 const SCORE_PRESETS = [
   0, 14, 15, 34, 35, 59, 60, 79, 80, 99, 100, 119, 120, 139, 140, 159, 160, 179, 180,
 ];
@@ -172,19 +172,24 @@ export function createDebugSession(options) {
         }
         break;
       case "lane-set":
-        setPlayerLane(Number.parseInt(actionEl.dataset.value ?? "", 10));
+        setPlayerLane(Number.parseInt(actionEl.dataset.value != null ? actionEl.dataset.value : "", 10));
         break;
       case "lives-set":
-        setLives(Number.parseInt(actionEl.dataset.value ?? "", 10));
+        setLives(Number.parseInt(actionEl.dataset.value != null ? actionEl.dataset.value : "", 10));
         break;
       case "score-apply":
         setScore(Number.parseInt(scoreInput.value, 10));
         break;
       case "score-preset":
-        setScore(Number.parseInt(actionEl.dataset.value ?? "", 10), true);
+        setScore(
+          Number.parseInt(actionEl.dataset.value != null ? actionEl.dataset.value : "", 10),
+          true,
+        );
         break;
       case "invincible-timer":
-        setInvincibleTimer(Number.parseInt(actionEl.dataset.value ?? "", 10));
+        setInvincibleTimer(
+          Number.parseInt(actionEl.dataset.value != null ? actionEl.dataset.value : "", 10),
+        );
         break;
       case "clear-obstacles":
         state.obstacles = [];
@@ -198,7 +203,11 @@ export function createDebugSession(options) {
         break;
       case "spawn-pattern":
         if (state.screen === "playing") {
-          spawnDebugObstacles(state, actionEl.dataset.value ?? "", runtime.spawnPlacementMode);
+          spawnDebugObstacles(
+            state,
+            actionEl.dataset.value != null ? actionEl.dataset.value : "",
+            runtime.spawnPlacementMode,
+          );
           onRender();
           syncUi();
         }
