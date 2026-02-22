@@ -10,6 +10,7 @@
 - 被弾後 `500ms` の無敵時間
 - 最高スコアの `localStorage` 保存
 - 縦持ち向けUI（横向き時は案内オーバーレイ表示）
+- `?debug=1` の手動QA向けデバッグモード（状態操作 / ステップ実行 / 診断表示）
 - 画像素材なし（図形ベース）
 
 ## 遊び方
@@ -69,6 +70,24 @@ Stage 10 到達後は Stage 10 の設定を維持します。
 - VS Code の Live Server
 - `python -m http.server`（Python が入っている場合）
 
+## デバッグモード（手動QA向け）
+
+URL クエリ `?debug=1` を付けると、プレイ画面に `DBG` ボタンが表示されます。
+
+- 例: `index.html?debug=1`
+- 例: `index.html?debug=1&seed=12345`（Seeded RNG 初期シード指定）
+
+主な機能:
+- Pause / Resume
+- `16ms / 100ms / 500ms` のステップ実行
+- スコア / ライフ / レーン / 無敵状態の直接操作
+- 障害物の強制生成（`0`, `1`, `2`, `01`, `02`, `12`）
+- Auto Spawn ON/OFF、Stage Lock、Hitbox/Telemetry 表示
+- RNG モード切替（Native / Seeded）と Seed リセット
+
+注意:
+- デバッグモード中は high score の `localStorage` 読み込み/保存を無効化します（テスト用データ保護）。
+
 ## GitHub Pages で公開する
 
 このプロジェクトは静的ファイルのみなので、そのまま `GitHub Pages` に公開できます。
@@ -93,6 +112,7 @@ git push -u origin main
 ## 保存データ
 - `localStorage` キー: `miniGame.laneDodge.highScore`
 - `localStorage` が使えない環境でもゲーム本体は動作（最高スコア保存のみスキップ）
+- `?debug=1` 時は高スコアの読込/保存を行わない（メモリ上のみ）
 
 ## ファイル構成
 ```text

@@ -1,6 +1,7 @@
 import { LANE_COUNT, MAX_DELTA_MS } from "./config.js";
-import { createInitialState, handleLaneTap, startGame, updateGame } from "./game.js";
-import { renderGame, renderResult, renderTitle } from "./render.js";
+import { createDebugSession, parseDebugConfig } from "./debug.js";
+import { createInitialState, finishGame, handleLaneTap, startGame, updateGame } from "./game.js";
+import { renderDebugOverlay, renderGame, renderResult, renderTitle } from "./render.js";
 import { loadHighScore } from "./storage.js";
 
 function bootstrap() {
@@ -52,12 +53,99 @@ function bootstrap() {
     throw new Error("画面要素が見つかりません。");
   }
 
-  const state = createInitialState(loadHighScore());
-  renderTitle(dom, state);
-  switchScreen(dom, "title");
+  const debugConfig = parseDebugConfig(new URLSearchParams(window.location.search));
+  const state = createInitialState(debugConfig.enabled ? 0 : loadHighScore());
 
   let rafId = 0;
   let lastTimestamp = 0;
+  /** @type {ReturnType<typeof createDebugSession> | null} */
+  let debugSession = null;
+
+  /**
+   * @param {'title' | 'playing' | 'result'} nextScreen
+   */
+  const switchScreenWithDebug = (nextScreen) => {
+    switchScreen(dom, nextScreen);
+    if (debugSession) {
+      debugSession.onScreenChange(nextScreen);
+    }
+  };
+
+  const renderCurrentFrame = () => {
+    renderGame(ctx, state);
+    if (debugSession) {
+      renderDebugOverlay(ctx, state, debugSession.getDebugOverlayView());
+      debugSession.syncUi();
+    }
+  };
+
+  const presentResultScreen = () => {
+    renderResult(dom, state);
+    renderTitle(dom, state);
+    switchScreenWithDebug("result");
+    rafId = 0;
+    lastTimestamp = 0;
+  };
+
+  /**
+   * @param {number} deltaMs
+   */
+  const processTick = (deltaMs) => {
+    if (debugSession) {
+      debugSession.beforeUpdate();
+    }
+
+    const result = updateGame(
+      state,
+      deltaMs,
+      debugSession ? debugSession.getUpdateOverrides() : undefined,
+    );
+
+    if (debugSession) {
+      debugSession.afterUpdate(deltaMs);
+    }
+
+    renderCurrentFrame();
+
+    if (result.finished) {
+      presentResultScreen();
+    }
+
+    return result;
+  };
+
+  /**
+   * @param {number} deltaMs
+   */
+  const stepDebugFrame = (deltaMs) => {
+    if (!debugSession || !debugSession.isPaused() || state.screen !== "playing") {
+      return;
+    }
+    lastTimestamp = 0;
+    processTick(deltaMs);
+  };
+
+  const forceDebugResult = () => {
+    if (!debugSession || state.screen !== "playing") {
+      return;
+    }
+    finishGame(state, { persistHighScore: false });
+    presentResultScreen();
+  };
+
+  if (debugConfig.enabled) {
+    debugSession = createDebugSession({
+      state,
+      screenEl: dom.screens.playing,
+      onRender: renderCurrentFrame,
+      onStep: stepDebugFrame,
+      onForceResult: forceDebugResult,
+      debugConfig,
+    });
+  }
+
+  renderTitle(dom, state);
+  switchScreenWithDebug("title");
 
   const loop = (timestamp) => {
     if (state.screen !== "playing") {
@@ -69,19 +157,22 @@ function bootstrap() {
     if (lastTimestamp === 0) {
       lastTimestamp = timestamp;
     }
+
+    if (debugSession && debugSession.isPaused()) {
+      lastTimestamp = timestamp;
+      debugSession.setLastDeltaMs(0);
+      renderCurrentFrame();
+      rafId = window.requestAnimationFrame(loop);
+      return;
+    }
+
     const rawDelta = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
     const deltaMs = Math.min(MAX_DELTA_MS, Math.max(0, rawDelta));
 
-    const result = updateGame(state, deltaMs);
-    renderGame(ctx, state);
+    const result = processTick(deltaMs);
 
     if (result.finished) {
-      renderResult(dom, state);
-      renderTitle(dom, state);
-      switchScreen(dom, "result");
-      rafId = 0;
-      lastTimestamp = 0;
       return;
     }
 
@@ -98,15 +189,18 @@ function bootstrap() {
 
   startButton.addEventListener("click", () => {
     startGame(state);
-    switchScreen(dom, "playing");
-    renderGame(ctx, state);
+    if (debugSession) {
+      debugSession.onGameStart();
+    }
+    switchScreenWithDebug("playing");
+    renderCurrentFrame();
     startLoopIfNeeded();
   });
 
   backToTitleButton.addEventListener("click", () => {
     state.screen = "title";
     renderTitle(dom, state);
-    switchScreen(dom, "title");
+    switchScreenWithDebug("title");
   });
 
   canvas.addEventListener("pointerdown", (event) => {

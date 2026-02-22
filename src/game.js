@@ -51,6 +51,26 @@ const LANE_METRICS = getLaneMetrics();
  */
 
 /**
+ * @typedef {'top' | 'near-player'} DebugSpawnPlacementMode
+ */
+
+/**
+ * @typedef {{
+ *   persistHighScore?: boolean;
+ *   random?: () => number;
+ *   stageOverride?: {
+ *     id: number;
+ *     minScore: number;
+ *     maxScore: number;
+ *     speedPxPerSec: number;
+ *     spawnIntervalMs: number;
+ *     doubleSpawnChance: number;
+ *   } | null;
+ *   disableSpawning?: boolean;
+ * }} UpdateGameOptions
+ */
+
+/**
  * @param {number} highScore
  * @returns {GameState}
  */
@@ -106,9 +126,11 @@ export function handleLaneTap(state, laneIndex) {
 
 /**
  * @param {GameState} state
+ * @param {{ persistHighScore?: boolean }} [options]
  * @returns {{ score: number; highScore: number; updatedHighScore: boolean }}
  */
-export function finishGame(state) {
+export function finishGame(state, options = {}) {
+  const { persistHighScore = true } = options;
   state.screen = "result";
   state.lastScore = state.score;
 
@@ -116,7 +138,9 @@ export function finishGame(state) {
   if (state.score > state.highScore) {
     state.highScore = state.score;
     updatedHighScore = true;
-    saveHighScore(state.highScore);
+    if (persistHighScore) {
+      saveHighScore(state.highScore);
+    }
   }
 
   return {
@@ -129,9 +153,10 @@ export function finishGame(state) {
 /**
  * @param {GameState} state
  * @param {number} deltaMs
+ * @param {UpdateGameOptions} [options]
  * @returns {{ finished: boolean; result?: { score: number; highScore: number; updatedHighScore: boolean } }}
  */
-export function updateGame(state, deltaMs) {
+export function updateGame(state, deltaMs, options = {}) {
   if (state.screen !== "playing") {
     return { finished: false };
   }
@@ -139,6 +164,13 @@ export function updateGame(state, deltaMs) {
   if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
     return { finished: false };
   }
+
+  const {
+    persistHighScore = true,
+    random = Math.random,
+    stageOverride = null,
+    disableSpawning = false,
+  } = options;
 
   state.elapsedMs += deltaMs;
   state.justHitFlashMs = Math.max(0, state.justHitFlashMs - deltaMs);
@@ -151,16 +183,18 @@ export function updateGame(state, deltaMs) {
     }
   }
 
-  const stage = getStageByScore(state.score);
-  state.spawnTimerMs += deltaMs;
-  let spawnSteps = 0;
-  while (
-    state.spawnTimerMs >= stage.spawnIntervalMs &&
-    spawnSteps < MAX_SPAWN_STEPS_PER_FRAME
-  ) {
-    state.spawnTimerMs -= stage.spawnIntervalMs;
-    spawnObstacles(state, stage.doubleSpawnChance);
-    spawnSteps += 1;
+  const stage = stageOverride ?? getStageByScore(state.score);
+  if (!disableSpawning) {
+    state.spawnTimerMs += deltaMs;
+    let spawnSteps = 0;
+    while (
+      state.spawnTimerMs >= stage.spawnIntervalMs &&
+      spawnSteps < MAX_SPAWN_STEPS_PER_FRAME
+    ) {
+      state.spawnTimerMs -= stage.spawnIntervalMs;
+      spawnObstacles(state, stage.doubleSpawnChance, random);
+      spawnSteps += 1;
+    }
   }
 
   const moveDeltaPx = (stage.speedPxPerSec * deltaMs) / 1000;
@@ -171,7 +205,7 @@ export function updateGame(state, deltaMs) {
   resolveCollisions(state);
 
   if (state.lives <= 0) {
-    const result = finishGame(state);
+    const result = finishGame(state, { persistHighScore });
     return { finished: true, result };
   }
 
@@ -231,18 +265,19 @@ function resolveCollisions(state) {
 /**
  * @param {GameState} state
  * @param {number} doubleSpawnChance
+ * @param {() => number} random
  */
-function spawnObstacles(state, doubleSpawnChance) {
-  const patterns = getSpawnPatterns(doubleSpawnChance);
+function spawnObstacles(state, doubleSpawnChance, random) {
+  const patterns = getSpawnPatterns(doubleSpawnChance, random);
   if (patterns.length === 0) {
     return;
   }
 
-  let index = Math.floor(Math.random() * patterns.length);
+  let index = Math.floor(random() * patterns.length);
   if (patterns.length > 1) {
     let attempts = 0;
     while (attempts < 4 && patterns[index].key === state.lastSpawnPatternKey) {
-      index = Math.floor(Math.random() * patterns.length);
+      index = Math.floor(random() * patterns.length);
       attempts += 1;
     }
   }
@@ -262,16 +297,17 @@ function spawnObstacles(state, doubleSpawnChance) {
 
 /**
  * @param {number} doubleSpawnChance
+ * @param {() => number} random
  * @returns {{ key: string; lanes: LaneIndex[] }[]}
  */
-function getSpawnPatterns(doubleSpawnChance) {
+function getSpawnPatterns(doubleSpawnChance, random) {
   const singlePatterns = [
     { key: "0", lanes: [0] },
     { key: "1", lanes: [1] },
     { key: "2", lanes: [2] },
   ];
 
-  if (Math.random() >= doubleSpawnChance) {
+  if (random() >= doubleSpawnChance) {
     return singlePatterns;
   }
 
@@ -281,6 +317,36 @@ function getSpawnPatterns(doubleSpawnChance) {
     { key: "02", lanes: [0, 2] },
     { key: "12", lanes: [1, 2] },
   ];
+}
+
+/**
+ * @param {GameState} state
+ * @param {string | LaneIndex[]} lanePattern
+ * @param {DebugSpawnPlacementMode} [placementMode]
+ * @returns {number}
+ */
+export function spawnDebugObstacles(state, lanePattern, placementMode = "top") {
+  const lanes = normalizeLanePattern(lanePattern);
+  if (lanes.length === 0) {
+    return 0;
+  }
+
+  const y =
+    placementMode === "near-player"
+      ? LANE_METRICS.playerY + (LANE_METRICS.playerHeight - LANE_METRICS.obstacleHeight) * 0.5
+      : OBSTACLE_SPAWN_Y;
+
+  for (const lane of lanes) {
+    state.obstacles.push({
+      id: state.nextObstacleId++,
+      lane,
+      y,
+      width: LANE_METRICS.obstacleWidth,
+      height: LANE_METRICS.obstacleHeight,
+    });
+  }
+
+  return lanes.length;
 }
 
 /**
@@ -307,6 +373,33 @@ function getObstacleRect(obstacle) {
     top: obstacle.y,
     bottom: obstacle.y + obstacle.height,
   };
+}
+
+/**
+ * @param {string | LaneIndex[]} lanePattern
+ * @returns {LaneIndex[]}
+ */
+function normalizeLanePattern(lanePattern) {
+  /** @type {number[]} */
+  const raw = Array.isArray(lanePattern)
+    ? lanePattern.slice()
+    : String(lanePattern)
+        .split("")
+        .map((char) => Number.parseInt(char, 10))
+        .filter((value) => Number.isInteger(value));
+
+  /** @type {LaneIndex[]} */
+  const lanes = [];
+  for (const value of raw) {
+    if (value < 0 || value >= LANE_COUNT) {
+      continue;
+    }
+    if (lanes.includes(/** @type {LaneIndex} */ (value))) {
+      continue;
+    }
+    lanes.push(/** @type {LaneIndex} */ (value));
+  }
+  return lanes;
 }
 
 function rectsOverlap(a, b) {
