@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>3レーン障害物回避ゲーム (Debug)</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="phone-frame">
+        <main class="game-root" aria-live="polite">
+          <section id="screen-title" class="screen screen-title is-active" aria-label="タイトル画面">
+            <div class="card">
+              <p class="eyebrow">MINI GAME</p>
+              <h1 class="title">3レーン障害物回避</h1>
+              <p id="title-high-score" class="meta">最高スコア: 0</p>
+              <button id="start-button" class="primary-button" type="button">ゲームスタート</button>
+            </div>
+          </section>
+
+          <section id="screen-game" class="screen screen-game" aria-label="ゲーム画面">
+            <canvas
+              id="game-canvas"
+              width="360"
+              height="640"
+              role="img"
+              aria-label="3レーン障害物回避ゲームのプレイ画面"
+            ></canvas>
+          </section>
+
+          <section id="screen-result" class="screen screen-result" aria-label="リザルト画面">
+            <div class="card">
+              <p class="eyebrow">RESULT</p>
+              <h2 class="title result-title">ゲームオーバー</h2>
+              <p id="result-score" class="meta">今回スコア: 0</p>
+              <p id="result-high-score" class="meta">最高スコア: 0</p>
+              <button id="back-to-title-button" class="secondary-button" type="button">
+                タイトルへ
+              </button>
+            </div>
+          </section>
+
+          <div id="orientation-overlay" class="orientation-overlay" aria-hidden="true">
+            <div class="overlay-card">
+              <p>縦持ちでプレイしてください</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="../src/main.js"></script>
+  </body>
+</html>

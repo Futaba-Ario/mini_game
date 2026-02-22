@@ -53,7 +53,7 @@ function bootstrap() {
     throw new Error("画面要素が見つかりません。");
   }
 
-  const debugConfig = parseDebugConfig(new URLSearchParams(window.location.search));
+  const debugConfig = parseDebugConfig(getEffectiveDebugSearchParams());
   const state = createInitialState(debugConfig.enabled ? 0 : loadHighScore());
 
   let rafId = 0;
@@ -261,3 +261,24 @@ function updateOrientationOverlay(overlay) {
 }
 
 bootstrap();
+
+/**
+ * `/debug/` 配下ではクエリ未指定でもデバッグを有効化する。
+ * 例: /repo/debug/ -> debug=1 扱い
+ * @returns {URLSearchParams}
+ */
+function getEffectiveDebugSearchParams() {
+  const searchParams = new URLSearchParams(window.location.search);
+  if (!searchParams.has("debug") && isDebugPath(window.location.pathname)) {
+    searchParams.set("debug", "1");
+  }
+  return searchParams;
+}
+
+/**
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+function isDebugPath(pathname) {
+  return /(^|\/)debug(?:\/index\.html)?\/?$/.test(pathname);
+}
